@@ -15,6 +15,7 @@ import { RolesGuard } from './guards/roles.guard';
 import { Roles } from './decorators/roles.decorator';
 import { CurrentUser } from './decorators/current-user.decorator';
 import { AuthResponse } from './interfaces/auth-response.interface';
+import { FirebaseAuthDto } from './dto/firebase-auth.dto';
 
 @Controller('auth')
 export class AuthController {
@@ -47,5 +48,10 @@ export class AuthController {
       message: 'Welcome to admin dashboard',
       user,
     };
+  }
+
+  @Post('firebase')
+  async firebaseAuth(@Body() firebaseAuthDto: FirebaseAuthDto) {
+    return this.authService.validateFirebaseToken(firebaseAuthDto);
   }
 }

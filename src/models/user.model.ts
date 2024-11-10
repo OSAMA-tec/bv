@@ -5,12 +5,14 @@ export interface IUser {
   _id: Types.ObjectId;
   name: string;
   email: string;
-  password: string;
+  password?: string;
   role: string;
   walletAddress?: string;
   isKYCVerified: boolean;
   phoneNumber?: string;
   profileImage?: string;
+  provider: string;
+  providerId?: string;
   createdAt: Date;
   updatedAt: Date;
 }
@@ -25,11 +27,21 @@ export class User {
   @Prop({ required: true, unique: true })
   email: string;
 
-  @Prop({ required: true })
-  password: string;
+  @Prop()
+  password?: string;
 
   @Prop({ required: true, enum: ['user', 'admin'], default: 'user' })
   role: string;
+
+  @Prop({
+    required: true,
+    enum: ['local', 'google', 'facebook'],
+    default: 'local',
+  })
+  provider: string;
+
+  @Prop()
+  providerId?: string;
 
   @Prop()
   walletAddress?: string;

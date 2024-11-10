@@ -17,6 +17,7 @@ import { User, UserSchema } from './models/user.model';
 import { Property, PropertySchema } from './models/property.model';
 import { NFT, NFTSchema } from './models/nft.model';
 import { Transaction, TransactionSchema } from './models/transaction.model';
+import * as admin from 'firebase-admin';
 
 @Module({
   imports: [
@@ -55,6 +56,23 @@ import { Transaction, TransactionSchema } from './models/transaction.model';
     CommonModule,
   ],
   controllers: [AppController],
-  providers: [AppService],
+  providers: [
+    AppService,
+    {
+      provide: 'FIREBASE_ADMIN',
+      useFactory: (configService: ConfigService) => {
+        return admin.initializeApp({
+          credential: admin.credential.cert({
+            projectId: configService.get('FIREBASE_PROJECT_ID'),
+            clientEmail: configService.get('FIREBASE_CLIENT_EMAIL'),
+            privateKey: configService
+              .get('FIREBASE_PRIVATE_KEY')
+              .replace(/\\n/g, '\n'),
+          }),
+        });
+      },
+      inject: [ConfigService],
+    },
+  ],
 })
 export class AppModule {}

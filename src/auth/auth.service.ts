@@ -7,10 +7,12 @@ import { JwtService } from '@nestjs/jwt';
 import { InjectModel } from '@nestjs/mongoose';
 import { Model } from 'mongoose';
 import * as bcrypt from 'bcrypt';
+import * as admin from 'firebase-admin';
 import { User, UserDocument } from '../models/user.model';
 import { RegisterDto } from './dto/register.dto';
 import { LoginDto } from './dto/login.dto';
 import { AuthResponse } from './interfaces/auth-response.interface';
+import { FirebaseAuthDto } from './dto/firebase-auth.dto';
 
 @Injectable()
 export class AuthService {
@@ -82,11 +84,46 @@ export class AuthService {
     }
   }
 
+  async validateFirebaseToken(firebaseAuthDto: FirebaseAuthDto) {
+    try {
+      // Verify Firebase token
+      const decodedToken = await admin
+        .auth()
+        .verifyIdToken(firebaseAuthDto.idToken);
+
+      // Find or create user
+      let user = await this.userModel.findOne({
+        email: decodedToken.email,
+        provider: firebaseAuthDto.provider,
+      });
+
+      if (!user) {
+        // Create new user if doesn't exist
+        user = await this.userModel.create({
+          email: decodedToken.email,
+          name: decodedToken.name || decodedToken.email,
+          provider: firebaseAuthDto.provider,
+          providerId: decodedToken.uid,
+          profileImage: decodedToken.picture,
+          role: 'user',
+        });
+      }
+
+      // Generate JWT token
+      const token = this.generateToken(user);
+
+      return this.buildResponse(user, token);
+    } catch {
+      throw new UnauthorizedException('Invalid Firebase token');
+    }
+  }
+
   private generateToken(user: UserDocument): string {
     const payload = {
       sub: user._id.toString(),
       email: user.email,
       role: user.role,
+      provider: user.provider,
     };
     return this.jwtService.sign(payload);
   }
