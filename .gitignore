@@ -147,3 +147,7 @@ output.json
 /test/temp
 /test/coverage
 EOF
+# Elastic Beanstalk Files
+.elasticbeanstalk/*
+!.elasticbeanstalk/*.cfg.yml
+!.elasticbeanstalk/*.global.yml
