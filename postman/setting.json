@@ -1,0 +1,262 @@
+{
+    "info": {
+      "_postman_id": "7a5e9d2b-8f4c-4d2a-9c8e-1234567890ab",
+      "name": "Real Estate NFT Platform - Settings API",
+      "description": "API collection for Settings Management",
+      "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+    },
+    "item": [
+      {
+        "name": "Settings",
+        "description": "Settings management endpoints",
+        "item": [
+          {
+            "name": "Get Profile",
+            "request": {
+              "method": "GET",
+              "header": [
+                {
+                  "key": "Authorization",
+                  "value": "Bearer {{authToken}}",
+                  "type": "text"
+                }
+              ],
+              "url": {
+                "raw": "{{baseUrl}}/api/settings/profile",
+                "host": ["{{baseUrl}}"],
+                "path": ["api", "settings", "profile"]
+              },
+              "description": "Get user profile settings"
+            }
+          },
+          {
+            "name": "Update Profile",
+            "request": {
+              "method": "PUT",
+              "header": [
+                {
+                  "key": "Authorization",
+                  "value": "Bearer {{authToken}}",
+                  "type": "text"
+                },
+                {
+                  "key": "Content-Type",
+                  "value": "application/json",
+                  "type": "text"
+                }
+              ],
+              "body": {
+                "mode": "raw",
+                "raw": "{\n    \"name\": \"John Doe\",\n    \"email\": \"john.doe@example.com\",\n    \"phoneNumber\": \"+1234567890\",\n    \"profileImage\": \"https://example.com/profile.jpg\"\n}"
+              },
+              "url": {
+                "raw": "{{baseUrl}}/api/settings/profile",
+                "host": ["{{baseUrl}}"],
+                "path": ["api", "settings", "profile"]
+              },
+              "description": "Update user profile settings"
+            }
+          },
+          {
+            "name": "Update Notification Preferences",
+            "request": {
+              "method": "PUT",
+              "header": [
+                {
+                  "key": "Authorization",
+                  "value": "Bearer {{authToken}}",
+                  "type": "text"
+                },
+                {
+                  "key": "Content-Type",
+                  "value": "application/json",
+                  "type": "text"
+                }
+              ],
+              "body": {
+                "mode": "raw",
+                "raw": "{\n    \"email\": true,\n    \"push\": true,\n    \"sms\": false,\n    \"marketing\": false,\n    \"updates\": true,\n    \"security\": true\n}"
+              },
+              "url": {
+                "raw": "{{baseUrl}}/api/settings/notifications",
+                "host": ["{{baseUrl}}"],
+                "path": ["api", "settings", "notifications"]
+              },
+              "description": "Update notification preferences"
+            }
+          },
+          {
+            "name": "Enable 2FA",
+            "request": {
+              "method": "POST",
+              "header": [
+                {
+                  "key": "Authorization",
+                  "value": "Bearer {{authToken}}",
+                  "type": "text"
+                }
+              ],
+              "url": {
+                "raw": "{{baseUrl}}/api/settings/2fa/enable",
+                "host": ["{{baseUrl}}"],
+                "path": ["api", "settings", "2fa", "enable"]
+              },
+              "description": "Enable two-factor authentication"
+            }
+          },
+          {
+            "name": "Verify 2FA",
+            "request": {
+              "method": "POST",
+              "header": [
+                {
+                  "key": "Authorization",
+                  "value": "Bearer {{authToken}}",
+                  "type": "text"
+                },
+                {
+                  "key": "Content-Type",
+                  "value": "application/json",
+                  "type": "text"
+                }
+              ],
+              "body": {
+                "mode": "raw",
+                "raw": "{\n    \"token\": \"123456\"\n}"
+              },
+              "url": {
+                "raw": "{{baseUrl}}/api/settings/2fa/verify",
+                "host": ["{{baseUrl}}"],
+                "path": ["api", "settings", "2fa", "verify"]
+              },
+              "description": "Verify two-factor authentication code"
+            }
+          },
+          {
+            "name": "Update Security Settings",
+            "request": {
+              "method": "PUT",
+              "header": [
+                {
+                  "key": "Authorization",
+                  "value": "Bearer {{authToken}}",
+                  "type": "text"
+                },
+                {
+                  "key": "Content-Type",
+                  "value": "application/json",
+                  "type": "text"
+                }
+              ],
+              "body": {
+                "mode": "raw",
+                "raw": "{\n    \"twoFactorEnabled\": true,\n    \"currentPassword\": \"currentPassword123\",\n    \"newPassword\": \"newPassword123\"\n}"
+              },
+              "url": {
+                "raw": "{{baseUrl}}/api/settings/security",
+                "host": ["{{baseUrl}}"],
+                "path": ["api", "settings", "security"]
+              },
+              "description": "Update security settings"
+            }
+          },
+          {
+            "name": "Update Password",
+            "request": {
+              "method": "PUT",
+              "header": [
+                {
+                  "key": "Authorization",
+                  "value": "Bearer {{authToken}}",
+                  "type": "text"
+                },
+                {
+                  "key": "Content-Type",
+                  "value": "application/json",
+                  "type": "text"
+                }
+              ],
+              "body": {
+                "mode": "raw",
+                "raw": "{\n    \"currentPassword\": \"currentPassword123\",\n    \"newPassword\": \"newPassword123\"\n}"
+              },
+              "url": {
+                "raw": "{{baseUrl}}/api/settings/security/password",
+                "host": ["{{baseUrl}}"],
+                "path": ["api", "settings", "security", "password"]
+              },
+              "description": "Update password"
+            }
+          },
+          {
+            "name": "Update Device Info",
+            "request": {
+              "method": "POST",
+              "header": [
+                {
+                  "key": "Authorization",
+                  "value": "Bearer {{authToken}}",
+                  "type": "text"
+                },
+                {
+                  "key": "Content-Type",
+                  "value": "application/json",
+                  "type": "text"
+                }
+              ],
+              "body": {
+                "mode": "raw",
+                "raw": "{\n    \"deviceId\": \"device123\",\n    \"deviceType\": \"mobile\",\n    \"deviceName\": \"iPhone 13\",\n    \"osVersion\": \"iOS 15.0\"\n}"
+              },
+              "url": {
+                "raw": "{{baseUrl}}/api/settings/devices",
+                "host": ["{{baseUrl}}"],
+                "path": ["api", "settings", "devices"]
+              },
+              "description": "Update device information"
+            }
+          },
+          {
+            "name": "Update Preferences",
+            "request": {
+              "method": "PUT",
+              "header": [
+                {
+                  "key": "Authorization",
+                  "value": "Bearer {{authToken}}",
+                  "type": "text"
+                },
+                {
+                  "key": "Content-Type",
+                  "value": "application/json",
+                  "type": "text"
+                }
+              ],
+              "body": {
+                "mode": "raw",
+                "raw": "{\n    \"darkMode\": true,\n    \"emailNotifications\": true,\n    \"pushNotifications\": true,\n    \"timezone\": \"America/New_York\"\n}"
+              },
+              "url": {
+                "raw": "{{baseUrl}}/api/settings/preferences",
+                "host": ["{{baseUrl}}"],
+                "path": ["api", "settings", "preferences"]
+              },
+              "description": "Update user preferences"
+            }
+          }
+        ]
+      }
+    ],
+    "variable": [
+      {
+        "key": "baseUrl",
+        "value": "http://localhost:3000",
+        "type": "string"
+      },
+      {
+        "key": "authToken",
+        "value": "your-jwt-token-here",
+        "type": "string"
+      }
+    ]
+  }

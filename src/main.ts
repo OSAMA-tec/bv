@@ -2,6 +2,7 @@ import { NestFactory } from '@nestjs/core';
 import { ValidationPipe } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { Logger } from '@nestjs/common';
+import { SwaggerModule, DocumentBuilder } from '@nestjs/swagger';
 import * as morgan from 'morgan';
 import { AppModule } from './app.module';
 import { LoggingInterceptor } from './common/interceptors/logging.interceptor';
@@ -21,6 +22,21 @@ async function bootstrap() {
 
   // Global prefix
   app.setGlobalPrefix('api');
+
+  // Swagger setup
+  const config = new DocumentBuilder()
+    .setTitle('Real Estate NFT Platform API')
+    .setDescription('The Real Estate NFT Platform API description')
+    .setVersion('1.0')
+    .addBearerAuth()
+    .addTag('auth')
+    .addTag('settings')
+    .addTag('properties')
+    .addTag('nfts')
+    .addTag('blockchain')
+    .build();
+  const document = SwaggerModule.createDocument(app, config);
+  SwaggerModule.setup('api/docs', app, document);
 
   // Request logging middleware
   app.use(morgan('dev'));
@@ -46,6 +62,7 @@ async function bootstrap() {
 
   // Log application details
   logger.log(`Application is running on: ${await app.getUrl()}`);
+  logger.log(`Swagger Documentation: ${await app.getUrl()}/api/docs`);
   logger.log(`Environment: ${configService.get<string>('nodeEnv')}`);
   logger.log(`Database: Connected to MongoDB`);
   logger.log(

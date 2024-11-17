@@ -54,6 +54,46 @@ export class User {
 
   @Prop()
   profileImage?: string;
+
+  @Prop({ default: 'en' })
+  language: string;
+
+  @Prop({ default: 'USD' })
+  preferredCurrency: string;
+
+  @Prop({ type: Object, default: {} })
+  notificationPreferences: {
+    email?: boolean;
+    push?: boolean;
+    sms?: boolean;
+    marketing?: boolean;
+    updates?: boolean;
+    security?: boolean;
+  };
+
+  @Prop({ default: false })
+  isTwoFactorEnabled: boolean;
+
+  @Prop()
+  twoFactorSecret?: string;
+
+  @Prop({ type: Date })
+  lastLogin?: Date;
+
+  @Prop({ type: [Object], default: [] })
+  devices: Array<{
+    deviceId: string;
+    deviceType: string;
+    lastActive: Date;
+  }>;
+
+  @Prop({ type: Object, default: {} })
+  preferences: {
+    darkMode?: boolean;
+    emailNotifications?: boolean;
+    pushNotifications?: boolean;
+    timezone?: string;
+  };
 }
 
 export const UserSchema = SchemaFactory.createForClass(User);

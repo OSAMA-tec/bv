@@ -5,19 +5,15 @@ import { AppController } from './app.controller';
 import { AppService } from './app.service';
 import { AuthModule } from './auth/auth.module';
 import { UsersModule } from './users/users.module';
+import { SettingsModule } from './settings/settings.module';
 import { PropertiesModule } from './properties/properties.module';
 import { NftsModule } from './nfts/nfts.module';
 import { BlockchainModule } from './blockchain/blockchain.module';
-import { FilesModule } from './files/files.module';
-import { PaymentsModule } from './payments/payments.module';
-import { AdminModule } from './admin/admin.module';
-import { CommonModule } from './common/common.module';
 import configuration from './config/configuration';
 import { User, UserSchema } from './models/user.model';
 import { Property, PropertySchema } from './models/property.model';
 import { NFT, NFTSchema } from './models/nft.model';
 import { Transaction, TransactionSchema } from './models/transaction.model';
-import * as admin from 'firebase-admin';
 
 @Module({
   imports: [
@@ -47,32 +43,12 @@ import * as admin from 'firebase-admin';
     // Feature Modules
     AuthModule,
     UsersModule,
+    SettingsModule,
     PropertiesModule,
     NftsModule,
     BlockchainModule,
-    FilesModule,
-    PaymentsModule,
-    AdminModule,
-    CommonModule,
   ],
   controllers: [AppController],
-  providers: [
-    AppService,
-    {
-      provide: 'FIREBASE_ADMIN',
-      useFactory: (configService: ConfigService) => {
-        return admin.initializeApp({
-          credential: admin.credential.cert({
-            projectId: configService.get('FIREBASE_PROJECT_ID'),
-            clientEmail: configService.get('FIREBASE_CLIENT_EMAIL'),
-            privateKey: configService
-              .get('FIREBASE_PRIVATE_KEY')
-              .replace(/\\n/g, '\n'),
-          }),
-        });
-      },
-      inject: [ConfigService],
-    },
-  ],
+  providers: [AppService],
 })
 export class AppModule {}
