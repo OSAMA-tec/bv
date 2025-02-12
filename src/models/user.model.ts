@@ -9,6 +9,9 @@ export interface IUser {
   role: string;
   walletAddress?: string;
   isKYCVerified: boolean;
+  isEmailVerified: boolean;
+  verificationCode?: string;
+  verificationCodeExpiry?: Date;
   phoneNumber?: string;
   profileImage?: string;
   provider: string;
@@ -19,7 +22,17 @@ export interface IUser {
 
 export type UserDocument = User & Document & IUser;
 
-@Schema({ timestamps: true })
+@Schema({
+  timestamps: true,
+  toJSON: {
+    transform: (doc, ret) => {
+      delete ret.password;
+      delete ret.verificationCode;
+      delete ret.verificationCodeExpiry;
+      return ret;
+    },
+  },
+})
 export class User {
   @Prop({ required: true })
   name: string;
@@ -27,10 +40,10 @@ export class User {
   @Prop({ required: true, unique: true })
   email: string;
 
-  @Prop()
-  password?: string;
+  @Prop({ required: true })
+  password: string;
 
-  @Prop({ required: true, enum: ['user', 'admin'], default: 'user' })
+  @Prop({ default: 'user' })
   role: string;
 
   @Prop({
@@ -48,6 +61,15 @@ export class User {
 
   @Prop({ default: false })
   isKYCVerified: boolean;
+
+  @Prop({ default: false })
+  isEmailVerified: boolean;
+
+  @Prop()
+  verificationCode?: string;
+
+  @Prop()
+  verificationCodeExpiry?: Date;
 
   @Prop()
   phoneNumber?: string;

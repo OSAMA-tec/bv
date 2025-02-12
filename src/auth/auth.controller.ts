@@ -33,6 +33,25 @@ export class AuthController {
     return this.authService.login(loginDto);
   }
 
+  @Post('verify-email')
+  @HttpCode(HttpStatus.OK)
+  async verifyEmail(
+    @Body('email') email: string,
+    @Body('code') code: string,
+  ): Promise<{ success: boolean }> {
+    const result = await this.authService.verifyEmail(email, code);
+    return { success: result };
+  }
+
+  @Post('resend-verification')
+  @HttpCode(HttpStatus.OK)
+  async resendVerification(
+    @Body('email') email: string,
+  ): Promise<{ message: string }> {
+    await this.authService.resendVerificationCode(email);
+    return { message: 'Verification code sent successfully' };
+  }
+
   @Get('profile')
   @UseGuards(JwtAuthGuard, RolesGuard)
   @Roles('user', 'admin')

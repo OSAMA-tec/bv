@@ -13,12 +13,14 @@ import { RegisterDto } from './dto/register.dto';
 import { LoginDto } from './dto/login.dto';
 import { AuthResponse } from './interfaces/auth-response.interface';
 import { FirebaseAuthDto } from './dto/firebase-auth.dto';
+import { EmailService } from '../email/email.service';
 
 @Injectable()
 export class AuthService {
   constructor(
     @InjectModel(User.name) private userModel: Model<UserDocument>,
     private jwtService: JwtService,
+    private emailService: EmailService,
   ) {}
 
   async register(registerDto: RegisterDto): Promise<AuthResponse> {
@@ -35,13 +37,26 @@ export class AuthService {
       // Hash password
       const hashedPassword = await bcrypt.hash(registerDto.password, 10);
 
+      // Generate verification code
+      const verificationCode = this.emailService.generateVerificationCode();
+      const verificationExpiry = new Date(Date.now() + 10 * 60 * 1000); // 10 minutes
+
       // Create new user
       const newUser = new this.userModel({
         ...registerDto,
         password: hashedPassword,
+        verificationCode,
+        verificationCodeExpiry: verificationExpiry,
+        isEmailVerified: false,
       });
 
       const savedUser = await newUser.save();
+
+      // Send verification email
+      await this.emailService.sendVerificationEmail(
+        savedUser.email,
+        verificationCode,
+      );
 
       // Generate JWT token
       const token = this.generateToken(savedUser);
@@ -118,6 +133,60 @@ export class AuthService {
     }
   }
 
+  // ============ Email Verification Functions ============
+
+  async verifyEmail(email: string, code: string): Promise<boolean> {
+    const user = await this.userModel.findOne({ email });
+
+    if (!user) {
+      throw new BadRequestException('User not found');
+    }
+
+    if (user.isEmailVerified) {
+      throw new BadRequestException('Email already verified');
+    }
+
+    if (!user.verificationCode || !user.verificationCodeExpiry) {
+      throw new BadRequestException('No verification code found');
+    }
+
+    if (new Date() > user.verificationCodeExpiry) {
+      throw new BadRequestException('Verification code expired');
+    }
+
+    if (user.verificationCode !== code) {
+      throw new BadRequestException('Invalid verification code');
+    }
+
+    user.isEmailVerified = true;
+    user.verificationCode = undefined;
+    user.verificationCodeExpiry = undefined;
+    await user.save();
+
+    return true;
+  }
+
+  async resendVerificationCode(email: string): Promise<void> {
+    const user = await this.userModel.findOne({ email });
+
+    if (!user) {
+      throw new BadRequestException('User not found');
+    }
+
+    if (user.isEmailVerified) {
+      throw new BadRequestException('Email already verified');
+    }
+
+    const verificationCode = this.emailService.generateVerificationCode();
+    const verificationExpiry = new Date(Date.now() + 10 * 60 * 1000); // 10 minutes
+
+    user.verificationCode = verificationCode;
+    user.verificationCodeExpiry = verificationExpiry;
+    await user.save();
+
+    await this.emailService.sendVerificationEmail(email, verificationCode);
+  }
+
   private generateToken(user: UserDocument): string {
     const payload = {
       sub: user._id.toString(),
@@ -137,6 +206,7 @@ export class AuthService {
         role: user.role,
         walletAddress: user.walletAddress,
         isKYCVerified: user.isKYCVerified,
+        isEmailVerified: user.isEmailVerified,
       },
       token,
     };

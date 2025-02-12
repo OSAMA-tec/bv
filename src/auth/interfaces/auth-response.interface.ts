@@ -6,6 +6,7 @@ export interface AuthResponse {
     role: string;
     walletAddress?: string;
     isKYCVerified: boolean;
+    isEmailVerified: boolean;
   };
   token: string;
 }
