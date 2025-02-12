@@ -24,6 +24,17 @@ export default () => ({
     network: process.env.BLOCKCHAIN_NETWORK,
     contractAddress: process.env.CONTRACT_ADDRESS,
     privateKey: process.env.PRIVATE_KEY,
+    rpcUrl: process.env.RPC_URL,
+    chainId: parseInt(process.env.CHAIN_ID, 10),
+    nftStorage: {
+      apiKey: process.env.NFT_STORAGE_API_KEY,
+      gateway: process.env.IPFS_GATEWAY || 'https://ipfs.io/ipfs/',
+    },
+    walletConnect: {
+      projectId: process.env.WALLET_CONNECT_PROJECT_ID,
+      bridge:
+        process.env.WALLET_CONNECT_BRIDGE || 'https://bridge.walletconnect.org',
+    },
   },
   cloudinary: {
     cloudName: process.env.CLOUDINARY_CLOUD_NAME,
