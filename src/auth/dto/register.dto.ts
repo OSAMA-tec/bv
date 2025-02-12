@@ -21,9 +21,9 @@ export class RegisterDto {
   @MinLength(6)
   password: string;
 
-  @IsEnum(['user', 'admin'])
-  @IsNotEmpty()
-  role: string;
+  @IsOptional()
+  @IsEnum(['user', 'admin'], { message: 'Role must be either user or admin' })
+  role?: string = 'user';
 
   @IsOptional()
   @IsString()
