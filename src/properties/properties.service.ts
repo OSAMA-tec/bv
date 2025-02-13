@@ -21,32 +21,61 @@ export class PropertiesService {
   // ============ Create Property ============
   async create(
     createPropertyDto: CreatePropertyDto,
-    userId: string,
+    userId: string | { id: string },
     files: {
       images?: Express.Multer.File[];
       documents?: Express.Multer.File[];
     },
   ): Promise<Property> {
     try {
+      console.log('\n==================================================');
+      console.log('🔄 PROPERTY SERVICE - CREATE METHOD');
+      console.log('==================================================');
+
+      // Extract user ID from either string or object
+      const ownerId = typeof userId === 'string' ? userId : userId.id;
+
+      console.log('\n📝 Processing DTO:', {
+        title: createPropertyDto.title,
+        propertyType: createPropertyDto.propertyType,
+        price: createPropertyDto.price,
+        coordinates: createPropertyDto.coordinates,
+        address: createPropertyDto.address,
+        ownerId,
+      });
+
       const imageUrls = files.images
         ? await Promise.all(
-            files.images.map((file) =>
-              this.cloudinaryProvider.uploadFile(file, 'properties/images'),
-            ),
+            files.images.map(async (file) => {
+              console.log('\n📤 Uploading image:', file.originalname);
+              const url = await this.cloudinaryProvider.uploadFile(
+                file,
+                'properties/images',
+              );
+              console.log('✅ Image uploaded:', url);
+              return url;
+            }),
           )
         : [];
 
       const documentUrls = files.documents
         ? await Promise.all(
-            files.documents.map((file) =>
-              this.cloudinaryProvider.uploadFile(file, 'properties/documents'),
-            ),
+            files.documents.map(async (file) => {
+              console.log('\n📤 Uploading document:', file.originalname);
+              const url = await this.cloudinaryProvider.uploadFile(
+                file,
+                'properties/documents',
+              );
+              console.log('✅ Document uploaded:', url);
+              return url;
+            }),
           )
         : [];
 
+      console.log('\n🏗️ Creating property document...');
       const property = new this.propertyModel({
         ...createPropertyDto,
-        owner: userId,
+        owner: ownerId,
         location: {
           type: 'Point',
           coordinates: createPropertyDto.coordinates,
@@ -56,10 +85,18 @@ export class PropertiesService {
         status: 'pending',
       });
 
-      return await property.save();
+      console.log('\n💾 Saving to database...');
+      const savedProperty = await property.save();
+      console.log('✅ Property saved successfully:', savedProperty._id);
+      console.log('==================================================\n');
+
+      return savedProperty;
     } catch (error) {
-      console.error('Property creation error:', error);
-      throw new BadRequestException('Failed to create property');
+      console.error('\n❌ Error in create property service:', error);
+      if (error.name === 'ValidationError') {
+        console.error('Validation error details:', error.errors);
+      }
+      throw error;
     }
   }
 
@@ -84,9 +121,14 @@ export class PropertiesService {
     return property;
   }
 
-  async findByOwner(userId: string): Promise<Property[]> {
+  async findByOwner(userId: string | { id: string }): Promise<Property[]> {
+    // Extract user ID from either string or object
+    const ownerId = typeof userId === 'string' ? userId : userId.id;
+
+    console.log('\n🔍 Finding properties for owner:', ownerId);
+
     return this.propertyModel
-      .find({ owner: userId })
+      .find({ owner: ownerId })
       .populate('owner', 'name email')
       .exec();
   }

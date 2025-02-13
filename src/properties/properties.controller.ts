@@ -10,6 +10,8 @@ import {
   UseInterceptors,
   UploadedFiles,
   Query,
+  ValidationPipe,
+  UsePipes,
 } from '@nestjs/common';
 import { FileFieldsInterceptor } from '@nestjs/platform-express';
 import { JwtAuthGuard } from '../auth/guards/jwt.guard';
@@ -56,6 +58,16 @@ export class PropertiesController {
       { name: 'documents', maxCount: 5 },
     ]),
   )
+  @UsePipes(
+    new ValidationPipe({
+      transform: true,
+      whitelist: true,
+      forbidNonWhitelisted: false,
+      transformOptions: {
+        enableImplicitConversion: true,
+      },
+    }),
+  )
   create(
     @Body() createPropertyDto: CreatePropertyDto,
     @CurrentUser('id') userId: string,
@@ -65,7 +77,55 @@ export class PropertiesController {
       documents?: Express.Multer.File[];
     },
   ) {
-    return this.propertiesService.create(createPropertyDto, userId, files);
+    try {
+      console.log('\n==================================================');
+      console.log('🔍 CREATE PROPERTY REQUEST DEBUG');
+      console.log('==================================================');
+
+      console.log('\n📦 Raw Request Body:');
+      console.log(JSON.stringify(createPropertyDto, null, 2));
+
+      console.log('\n🏷️ Property Type:', createPropertyDto.propertyType);
+      console.log('📍 Coordinates:', createPropertyDto.coordinates);
+      console.log('💰 Price:', createPropertyDto.price);
+
+      console.log('\n📁 Files Information:');
+      console.log('Images:', files.images ? files.images.length : 'No images');
+      console.log(
+        'Documents:',
+        files.documents ? files.documents.length : 'No documents',
+      );
+
+      if (files.images) {
+        console.log('\n📸 Image Details:');
+        files.images.forEach((file, index) => {
+          console.log(`Image ${index + 1}:`, {
+            name: file.originalname,
+            type: file.mimetype,
+            size: `${(file.size / 1024).toFixed(2)}KB`,
+          });
+        });
+      }
+
+      if (files.documents) {
+        console.log('\n📄 Document Details:');
+        files.documents.forEach((file, index) => {
+          console.log(`Document ${index + 1}:`, {
+            name: file.originalname,
+            type: file.mimetype,
+            size: `${(file.size / 1024).toFixed(2)}KB`,
+          });
+        });
+      }
+
+      console.log('\n👤 User ID:', userId);
+      console.log('==================================================\n');
+
+      return this.propertiesService.create(createPropertyDto, userId, files);
+    } catch (error) {
+      console.error('\n❌ Error in create property controller:', error);
+      throw error;
+    }
   }
 
   // ============ Get Properties ============
@@ -88,8 +148,9 @@ export class PropertiesController {
   @Get('my-properties')
   @ApiOperation({ summary: 'Get current user properties' })
   @Roles('user', 'admin')
-  findMyProperties(@CurrentUser('id') userId: string) {
-    return this.propertiesService.findByOwner(userId);
+  findMyProperties(@CurrentUser() user: { id: string }) {
+    console.log('\n👤 Finding properties for user:', user);
+    return this.propertiesService.findByOwner(user);
   }
 
   @Get(':id')
