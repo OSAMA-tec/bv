@@ -246,7 +246,7 @@ export class PropertiesService {
   // ============ Blockchain Operations ============
   async tokenizeProperty(
     propertyId: string,
-    userId: string,
+    userId: string | { id: string },
     tokenData: {
       tokenId: string;
       contractAddress: string;
@@ -260,7 +260,10 @@ export class PropertiesService {
       throw new NotFoundException('Property not found');
     }
 
-    if (property.owner.toString() !== userId) {
+    // Extract user ID from either string or object
+    const currentUserId = typeof userId === 'string' ? userId : userId.id;
+
+    if (property.owner.toString() !== currentUserId) {
       throw new ForbiddenException('Not authorized to tokenize this property');
     }
 
@@ -268,20 +271,127 @@ export class PropertiesService {
       throw new BadRequestException('Property is already tokenized');
     }
 
-    property.isTokenized = true;
-    property.tokenId = tokenData.tokenId;
-    property.contractAddress = tokenData.contractAddress;
-    property.tokenURI = tokenData.tokenURI;
-    property.history.push({
-      type: 'mint',
-      price: property.price,
-      date: new Date(),
-      transactionHash: tokenData.transactionHash,
-      from: property.owner,
-      to: property.owner,
-    });
+    try {
+      console.log('\n🔄 Starting property tokenization process...');
 
-    return await property.save();
+      // Generate NFT metadata
+      const nftMetadata = {
+        name: property.title,
+        description: property.description,
+        image: property.images[0], // Use first image as NFT image
+        attributes: [
+          {
+            trait_type: 'Property Type',
+            value: property.propertyType,
+          },
+          {
+            trait_type: 'Area',
+            value: property.area || 0,
+          },
+          {
+            trait_type: 'Bedrooms',
+            value: property.bedrooms || 0,
+          },
+          {
+            trait_type: 'Bathrooms',
+            value: property.bathrooms || 0,
+          },
+          {
+            trait_type: 'Year Built',
+            value: property.yearBuilt || 'N/A',
+          },
+        ],
+        externalUrl: `${process.env.FRONTEND_URL}/properties/${property._id}`,
+      };
+
+      // Update property with tokenization data
+      property.isTokenized = true;
+      property.tokenId = tokenData.tokenId;
+      property.contractAddress = tokenData.contractAddress;
+      property.tokenURI = tokenData.tokenURI;
+      property.status = 'tokenized';
+      property.nftMetadata = nftMetadata;
+
+      // Add tokenization event to history
+      property.history.push({
+        type: 'tokenize',
+        price: property.price,
+        date: new Date(),
+        transactionHash: tokenData.transactionHash,
+        from: property.owner,
+        tokenId: tokenData.tokenId,
+        contractAddress: tokenData.contractAddress,
+        tokenURI: tokenData.tokenURI,
+        metadata: {
+          blockNumber: Date.now(), // In a real scenario, this would come from the blockchain
+          network: process.env.BLOCKCHAIN_NETWORK || 'polygon-mumbai',
+          timestamp: new Date().toISOString(),
+        },
+      });
+
+      console.log('✅ Property tokenized successfully');
+      return await property.save();
+    } catch (error) {
+      console.error('❌ Error in tokenization:', error);
+      throw new BadRequestException('Failed to tokenize property');
+    }
+  }
+
+  async transferProperty(
+    propertyId: string,
+    fromUserId: string,
+    toUserId: string,
+    price: number,
+    transactionHash: string,
+  ): Promise<Property> {
+    const property = await this.propertyModel.findById(propertyId);
+
+    if (!property) {
+      throw new NotFoundException('Property not found');
+    }
+
+    if (property.owner.toString() !== fromUserId) {
+      throw new ForbiddenException('Not authorized to transfer this property');
+    }
+
+    if (!property.isTokenized) {
+      throw new BadRequestException(
+        'Property must be tokenized before transfer',
+      );
+    }
+
+    try {
+      console.log('\n🔄 Starting property transfer process...');
+
+      // Update property owner
+      property.owner = toUserId as any;
+      property.status = 'sold';
+
+      // Add transfer event to history
+      property.history.push({
+        type: 'transfer',
+        price,
+        date: new Date(),
+        transactionHash,
+        from: fromUserId as any,
+        to: toUserId as any,
+        tokenId: property.tokenId,
+        contractAddress: property.contractAddress,
+        metadata: {
+          blockNumber: Date.now(), // In a real scenario, this would come from the blockchain
+          network: process.env.BLOCKCHAIN_NETWORK || 'polygon-mumbai',
+          timestamp: new Date().toISOString(),
+          previousOwner: fromUserId,
+          newOwner: toUserId,
+        },
+      });
+
+      console.log('✅ Property transferred successfully');
+      return await property.save();
+    } catch (error) {
+      console.error('❌ Error in transfer:', error);
+      throw new BadRequestException('Failed to transfer property');
+    }
   }
 
   async listPropertyForSale(
@@ -347,37 +457,6 @@ export class PropertiesService {
       date: new Date(),
       transactionHash,
       from: property.owner,
-    });
-
-    return await property.save();
-  }
-
-  async transferProperty(
-    propertyId: string,
-    fromUserId: string,
-    toUserId: string,
-    price: number,
-    transactionHash: string,
-  ): Promise<Property> {
-    const property = await this.propertyModel.findById(propertyId);
-
-    if (!property) {
-      throw new NotFoundException('Property not found');
-    }
-
-    if (property.owner.toString() !== fromUserId) {
-      throw new ForbiddenException('Not authorized to transfer this property');
-    }
-
-    property.owner = toUserId as any;
-    property.status = 'sold';
-    property.history.push({
-      type: 'sale',
-      price,
-      date: new Date(),
-      transactionHash,
-      from: fromUserId as any,
-      to: toUserId as any,
     });
 
     return await property.save();

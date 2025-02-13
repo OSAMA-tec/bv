@@ -59,7 +59,10 @@ export class Property {
   @Prop()
   tokenURI?: string;
 
-  @Prop({ default: 'pending', enum: ['pending', 'listed', 'sold', 'unlisted'] })
+  @Prop({
+    default: 'pending',
+    enum: ['pending', 'listed', 'sold', 'unlisted', 'tokenized'],
+  })
   status: string;
 
   @Prop({ type: Number, default: 0 })
@@ -76,24 +79,40 @@ export class Property {
 
   @Prop([
     {
-      price: { type: Number, required: true },
-      date: { type: Date, default: Date.now },
-      transactionHash: String,
-      from: { type: MongooseSchema.Types.ObjectId, ref: 'User' },
-      to: { type: MongooseSchema.Types.ObjectId, ref: 'User' },
       type: {
         type: String,
-        enum: ['mint', 'transfer', 'list', 'unlist', 'sale', 'bid'],
+        enum: ['mint', 'transfer', 'list', 'unlist', 'sale', 'bid', 'tokenize'],
+        required: true,
+      },
+      price: { type: Number, required: true },
+      date: { type: Date, default: Date.now },
+      transactionHash: { type: String, required: true },
+      from: {
+        type: MongooseSchema.Types.ObjectId,
+        ref: 'User',
+        required: true,
+      },
+      to: { type: MongooseSchema.Types.ObjectId, ref: 'User' },
+      tokenId: String,
+      contractAddress: String,
+      tokenURI: String,
+      metadata: {
+        type: Object,
+        default: {},
       },
     },
   ])
   history: Array<{
+    type: 'mint' | 'transfer' | 'list' | 'unlist' | 'sale' | 'bid' | 'tokenize';
     price: number;
     date: Date;
-    transactionHash?: string;
-    from?: User;
+    transactionHash: string;
+    from: User;
     to?: User;
-    type: 'mint' | 'transfer' | 'list' | 'unlist' | 'sale' | 'bid';
+    tokenId?: string;
+    contractAddress?: string;
+    tokenURI?: string;
+    metadata?: Record<string, any>;
   }>;
 
   // ============ Property Details ============
@@ -139,6 +158,20 @@ export class Property {
 
   @Prop({ type: String })
   verificationDocument?: string;
+
+  // ============ NFT Metadata ============
+  @Prop({ type: Object, default: {} })
+  nftMetadata?: {
+    name?: string;
+    description?: string;
+    image?: string;
+    attributes?: Array<{
+      trait_type: string;
+      value: string | number;
+    }>;
+    externalUrl?: string;
+    animationUrl?: string;
+  };
 }
 
 export const PropertySchema = SchemaFactory.createForClass(Property);
