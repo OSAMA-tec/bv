@@ -5,11 +5,12 @@ import {
   ForbiddenException,
 } from '@nestjs/common';
 import { InjectModel } from '@nestjs/mongoose';
-import { Model } from 'mongoose';
+import { Model, Types } from 'mongoose';
 import { Property, PropertyDocument } from '../models/property.model';
 import { CreatePropertyDto } from './dto/create-property.dto';
 import { UpdatePropertyDto } from './dto/update-property.dto';
 import { CloudinaryProvider } from '../cloudinary/cloudinary.provider';
+import { User } from '../models/user.model';
 
 @Injectable()
 export class PropertiesService {
@@ -32,8 +33,8 @@ export class PropertiesService {
       console.log('🔄 PROPERTY SERVICE - CREATE METHOD');
       console.log('==================================================');
 
-      // Extract user ID from either string or object
-      const ownerId = typeof userId === 'string' ? userId : userId.id;
+      const ownerId = this.extractUserId(userId);
+      console.log('👤 Owner ID for property creation:', ownerId);
 
       console.log('\n📝 Processing DTO:', {
         title: createPropertyDto.title,
@@ -122,9 +123,7 @@ export class PropertiesService {
   }
 
   async findByOwner(userId: string | { id: string }): Promise<Property[]> {
-    // Extract user ID from either string or object
-    const ownerId = typeof userId === 'string' ? userId : userId.id;
-
+    const ownerId = this.extractUserId(userId);
     console.log('\n🔍 Finding properties for owner:', ownerId);
 
     return this.propertyModel
@@ -260,8 +259,12 @@ export class PropertiesService {
       throw new NotFoundException('Property not found');
     }
 
-    // Extract user ID from either string or object
-    const currentUserId = typeof userId === 'string' ? userId : userId.id;
+    const currentUserId = this.extractUserId(userId);
+    console.log('\n==== Ownership Debug Information ====');
+    console.log('Property Owner ID:', property.owner.toString());
+    console.log('Current User ID:', currentUserId);
+    console.log('Are IDs equal?:', property.owner.toString() === currentUserId);
+    console.log('================================\n');
 
     if (property.owner.toString() !== currentUserId) {
       throw new ForbiddenException('Not authorized to tokenize this property');
@@ -339,7 +342,7 @@ export class PropertiesService {
 
   async transferProperty(
     propertyId: string,
-    fromUserId: string,
+    fromUserId: string | { id: string },
     toUserId: string,
     price: number,
     transactionHash: string,
@@ -350,7 +353,14 @@ export class PropertiesService {
       throw new NotFoundException('Property not found');
     }
 
-    if (property.owner.toString() !== fromUserId) {
+    const currentUserId = this.extractUserId(fromUserId);
+    console.log('\n==== Transfer Debug Information ====');
+    console.log('Property Owner ID:', property.owner.toString());
+    console.log('From User ID:', currentUserId);
+    console.log('To User ID:', toUserId);
+    console.log('================================\n');
+
+    if (property.owner.toString() !== currentUserId) {
       throw new ForbiddenException('Not authorized to transfer this property');
     }
 
@@ -363,25 +373,30 @@ export class PropertiesService {
     try {
       console.log('\n🔄 Starting property transfer process...');
 
-      // Update property owner
-      property.owner = toUserId as any;
+      // Verify toUserId is a valid MongoDB ObjectId
+      if (!this.isValidObjectId(toUserId)) {
+        throw new BadRequestException('Invalid recipient user ID format');
+      }
+
+      // Update property owner with proper ObjectId
+      property.owner = toUserId as any as User;
       property.status = 'sold';
 
-      // Add transfer event to history
+      // Add transfer event to history with proper ObjectId conversion
       property.history.push({
         type: 'transfer',
         price,
         date: new Date(),
         transactionHash,
-        from: fromUserId as any,
-        to: toUserId as any,
+        from: currentUserId as any as User,
+        to: toUserId as any as User,
         tokenId: property.tokenId,
         contractAddress: property.contractAddress,
         metadata: {
-          blockNumber: Date.now(), // In a real scenario, this would come from the blockchain
+          blockNumber: Date.now(),
           network: process.env.BLOCKCHAIN_NETWORK || 'polygon-mumbai',
           timestamp: new Date().toISOString(),
-          previousOwner: fromUserId,
+          previousOwner: currentUserId,
           newOwner: toUserId,
         },
       });
@@ -390,13 +405,18 @@ export class PropertiesService {
       return await property.save();
     } catch (error) {
       console.error('❌ Error in transfer:', error);
-      throw new BadRequestException('Failed to transfer property');
+      if (error instanceof BadRequestException) {
+        throw error;
+      }
+      throw new BadRequestException(
+        'Failed to transfer property: ' + (error.message || 'Unknown error'),
+      );
     }
   }
 
   async listPropertyForSale(
     propertyId: string,
-    userId: string,
+    userId: string | { id: string },
     price: number,
     transactionHash: string,
   ): Promise<Property> {
@@ -406,7 +426,8 @@ export class PropertiesService {
       throw new NotFoundException('Property not found');
     }
 
-    if (property.owner.toString() !== userId) {
+    const currentUserId = this.extractUserId(userId);
+    if (property.owner.toString() !== currentUserId) {
       throw new ForbiddenException('Not authorized to list this property');
     }
 
@@ -433,7 +454,7 @@ export class PropertiesService {
 
   async unlistProperty(
     propertyId: string,
-    userId: string,
+    userId: string | { id: string },
     transactionHash: string,
   ): Promise<Property> {
     const property = await this.propertyModel.findById(propertyId);
@@ -442,7 +463,8 @@ export class PropertiesService {
       throw new NotFoundException('Property not found');
     }
 
-    if (property.owner.toString() !== userId) {
+    const currentUserId = this.extractUserId(userId);
+    if (property.owner.toString() !== currentUserId) {
       throw new ForbiddenException('Not authorized to unlist this property');
     }
 
@@ -464,7 +486,7 @@ export class PropertiesService {
 
   async placeBid(
     propertyId: string,
-    userId: string,
+    userId: string | { id: string },
     bidAmount: number,
     transactionHash: string,
   ): Promise<Property> {
@@ -474,6 +496,7 @@ export class PropertiesService {
       throw new NotFoundException('Property not found');
     }
 
+    const currentUserId = this.extractUserId(userId);
     if (!property.isAuctionEnabled) {
       throw new BadRequestException('Property is not available for auction');
     }
@@ -500,7 +523,7 @@ export class PropertiesService {
       price: bidAmount,
       date: new Date(),
       transactionHash,
-      from: userId as any,
+      from: currentUserId as any,
     });
 
     return await property.save();
@@ -513,20 +536,23 @@ export class PropertiesService {
     });
   }
 
-  async toggleFavorite(propertyId: string, userId: string): Promise<Property> {
+  async toggleFavorite(
+    propertyId: string,
+    userId: string | { id: string },
+  ): Promise<Property> {
     const property = await this.propertyModel.findById(propertyId);
 
     if (!property) {
       throw new NotFoundException('Property not found');
     }
 
-    const userIdStr = userId.toString();
+    const currentUserId = this.extractUserId(userId);
     const index = property.favorites.findIndex(
-      (id) => id.toString() === userIdStr,
+      (id) => id.toString() === currentUserId,
     );
 
     if (index === -1) {
-      property.favorites.push(userId as any);
+      property.favorites.push(currentUserId as any);
     } else {
       property.favorites.splice(index, 1);
     }
@@ -545,5 +571,20 @@ export class PropertiesService {
     }
 
     return property.history;
+  }
+
+  private extractUserId(userId: string | { id: string }): string {
+    console.log('\n🔍 Extracting user ID from:', userId);
+    const extractedId = typeof userId === 'string' ? userId : userId.id;
+    console.log('📋 Extracted ID:', extractedId);
+    return extractedId;
+  }
+
+  private isValidObjectId(id: string): boolean {
+    try {
+      return Types.ObjectId.isValid(id);
+    } catch {
+      return false;
+    }
   }
 }
