@@ -1,25 +1,65 @@
-import { Provider } from '@nestjs/common';
-import * as admin from 'firebase-admin';
+import { Injectable } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
+import * as admin from 'firebase-admin';
+import type { Storage } from 'firebase-admin/storage';
 
-export const FirebaseProvider: Provider = {
-  provide: 'FIREBASE_ADMIN',
-  useFactory: (configService: ConfigService) => {
-    const firebaseConfig = {
-      credential: admin.credential.cert({
-        projectId: configService.get('firebase.projectId'),
-        clientEmail: configService.get('firebase.clientEmail'),
-        privateKey: configService
-          .get('firebase.privateKey')
-          ?.replace(/\\n/g, '\n'),
-      }),
-    };
+@Injectable()
+export class FirebaseProvider {
+  private bucket: ReturnType<Storage['bucket']>;
 
-    // Initialize Firebase Admin if not already initialized
+  constructor(private configService: ConfigService) {
     if (!admin.apps.length) {
-      return admin.initializeApp(firebaseConfig);
+      const projectId = this.configService.get('firebase.projectId');
+      const clientEmail = this.configService.get('firebase.clientEmail');
+      const privateKey = this.configService
+        .get('firebase.privateKey')
+        ?.replace(/\\n/g, '\n');
+      const storageBucket =
+        this.configService.get('firebase.storageBucket') ||
+        `${projectId}.appspot.com`;
+
+      if (!projectId || !clientEmail || !privateKey) {
+        throw new Error('Missing Firebase configuration');
+      }
+
+      admin.initializeApp({
+        credential: admin.credential.cert({
+          projectId,
+          clientEmail,
+          privateKey,
+        }),
+        storageBucket,
+      });
     }
-    return admin.app();
-  },
-  inject: [ConfigService],
-};
+    this.bucket = admin.storage().bucket();
+  }
+
+  async uploadFile(file: Express.Multer.File, path: string): Promise<string> {
+    try {
+      const buffer = file.buffer;
+      const fileUpload = this.bucket.file(path);
+
+      await fileUpload.save(buffer, {
+        contentType: file.mimetype,
+        public: true,
+      });
+
+      return fileUpload.publicUrl();
+    } catch (error) {
+      console.error('Firebase upload error:', error);
+      throw new Error('Failed to upload file to Firebase');
+    }
+  }
+
+  async deleteFile(url: string): Promise<void> {
+    try {
+      const fileName = url.split('/').pop();
+      if (fileName) {
+        await this.bucket.file(fileName).delete();
+      }
+    } catch (error) {
+      console.error('Firebase delete error:', error);
+      // Swallow delete errors as the file might not exist
+    }
+  }
+}

@@ -25,18 +25,14 @@ async function bootstrap() {
 
   // Swagger setup
   const config = new DocumentBuilder()
-    .setTitle('Real Estate NFT Platform API')
-    .setDescription('The Real Estate NFT Platform API description')
+    .setTitle('Real Estate NFT API')
+    .setDescription('API documentation for Real Estate NFT Platform')
     .setVersion('1.0')
     .addBearerAuth()
-    .addTag('auth')
-    .addTag('settings')
-    .addTag('properties')
-    .addTag('nfts')
-    .addTag('blockchain')
+    .addTag('Properties')
     .build();
   const document = SwaggerModule.createDocument(app, config);
-  SwaggerModule.setup('api/docs', app, document);
+  SwaggerModule.setup('api', app, document);
 
   // Request logging middleware
   app.use(morgan('dev'));
@@ -62,7 +58,7 @@ async function bootstrap() {
 
   // Log application details
   logger.log(`Application is running on: ${await app.getUrl()}`);
-  logger.log(`Swagger Documentation: ${await app.getUrl()}/api/docs`);
+  logger.log(`Swagger Documentation: ${await app.getUrl()}/api`);
   logger.log(`Environment: ${configService.get<string>('nodeEnv')}`);
   logger.log(`Database: Connected to MongoDB`);
   logger.log(
